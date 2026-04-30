@@ -1,0 +1,12 @@
+﻿data/
+results/
+acolite/
+*.zip
+__pycache__/
+*.pyc
+.vscode/
+--in_dir
+
+*.tif
+*.tiff
+*.aux.xml
