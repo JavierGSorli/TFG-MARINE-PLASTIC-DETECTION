@@ -56,7 +56,6 @@ UTILS_DIR = MARIDA_ROOT / "utils"
 UNET_SCRIPT = UNET_DIR / "predict_mask.py"
 UNET_MODEL_PATH = UNET_DIR / "trained_models" / "44" / "model.pth"
 RESNET_SCRIPT = RESNET_DIR / "predict_resnet.py"
-RF_MODEL_PATH = RF_DIR / "rf_classifier.joblib"
 RF_MODEL_PATHS = {
     "full": RF_DIR / "rf_classifier_full.joblib",
     "no_texture": RF_DIR / "rf_classifier_no_texture.joblib",

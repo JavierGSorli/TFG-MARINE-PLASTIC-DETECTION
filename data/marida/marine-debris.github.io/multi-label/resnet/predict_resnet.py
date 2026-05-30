@@ -39,7 +39,7 @@ def main():
     ap.add_argument("--patch_tif", required=True, help="Patch multibanda (GeoTIFF).")
     ap.add_argument(
         "--model_path",
-        default=r"C:\CDIA_oficial\tfg\tfg-marine-plastic-detection\data\marida\marine-debris.github.io\multi-label\resnet\trained_models\18\model.pth",
+        default=str(_MARIDA_RESNET / "trained_models" / "18" / "model.pth"),
         help="Ruta al modelo ResNet .pth"
     )
     ap.add_argument("--out_json", required=True, help="JSON de salida con probabilidades y etiquetas.")
