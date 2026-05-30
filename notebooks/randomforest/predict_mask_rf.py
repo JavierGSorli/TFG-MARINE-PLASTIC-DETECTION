@@ -156,8 +156,8 @@ def main():
     ap.add_argument("--patch_tif", required=True, help="Patch multibanda (GeoTIFF).")
     ap.add_argument(
         "--model_path",
-        default=str(_MARIDA_RF / "rf_classifier.joblib"),
-        help="Ruta al rf_classifier.joblib",
+        default=str(_MARIDA_RF / "rf_classifier_full.joblib"),
+        help="Ruta al modelo Random Forest.",
     )
     ap.add_argument("--out_mask", required=True, help="GeoTIFF de salida con mascara.")
     ap.add_argument(

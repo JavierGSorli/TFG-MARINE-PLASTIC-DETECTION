@@ -44,7 +44,7 @@ En particular, la carpeta de MARIDA no se conserva completa. Solo se mantienen:
 - scripts de inferencia realmente usados,
 - pesos entrenados necesarios,
 - utilidades importadas por esos scripts,
-- `dataset.h5` para las firmas espectrales SAM.
+- y la estructura mínima necesaria para referenciar `dataset.h5` en la construcción de firmas SAM.
 
 No se incluyen ejemplos, datos de prueba, material crudo, zips, cachés ni otros artefactos que no sean necesarios para ejecutar el flujo actual.
 
@@ -52,6 +52,7 @@ Dos dependencias necesarias no se versionan en GitHub por exceder el límite de 
 
 - `data/windrows_nature/detallado/11045944/WASP_LW_SENT2_MED_L1C_B_201506_202109_10m_6y_NRT_v1.0.nc`
 - `data/external_models/marinedebrisdetector/unetplusplus1.ckpt`
+- `data/marida/marine-debris.github.io/data/dataset.h5`
 
 Ambos deben descargarse manualmente y colocarse en esas rutas exactas antes de ejecutar el flujo completo.
 
@@ -68,6 +69,10 @@ Referencias de descarga:
   - carpeta pública de pesos indicada en el README del repositorio original: `https://drive.google.com/drive/folders/1OBKr9G4zCP3X7fa8C7xBpJ8WNUyiajDL?usp=drive_link`
   - URL directa usada en el script:
     - `https://marinedebrisdetector.s3.eu-central-1.amazonaws.com/checkpoints/unet%2B%2B1/epoch=54-val_loss=0.50-auroc=0.987.ckpt`
+- `dataset.h5` de MARIDA para construir firmas SAM:
+  - repositorio original: `https://github.com/marine-debris/marine-debris.github.io`
+  - DOI principal de MARIDA: `https://doi.org/10.5281/zenodo.5151941`
+  - el README original de MARIDA indica que `data/dataset.h5` puede generarse ejecutando `utils/spectral_extraction.py` tras descargar MARIDA completo.
 
 ## Fases
 

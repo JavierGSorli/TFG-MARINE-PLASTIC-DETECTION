@@ -44,7 +44,6 @@ El pipeline depende de estos recursos versionados en el repo:
   - `semantic_segmentation/random_forest/`
   - `multi-label/resnet/`
   - `utils/`
-  - `data/dataset.h5`
 - scripts auxiliares todavía usados por el pipeline:
   - `notebooks/randomforest/predict_mask_rf.py`
   - `notebooks/indices/03_predict_indices.py`
@@ -70,6 +69,7 @@ Dos recursos necesarios para reproducir el flujo completo no se incluyen en GitH
 
 - `data/windrows_nature/detallado/11045944/WASP_LW_SENT2_MED_L1C_B_201506_202109_10m_6y_NRT_v1.0.nc`
 - `data/external_models/marinedebrisdetector/unetplusplus1.ckpt`
+- `data/marida/marine-debris.github.io/data/dataset.h5`
 
 El pipeline espera encontrarlos en esas rutas exactas. Deben descargarse manualmente antes de ejecutar:
 
@@ -85,6 +85,10 @@ El pipeline espera encontrarlos en esas rutas exactas. Deben descargarse manualm
     - `https://drive.google.com/drive/folders/1OBKr9G4zCP3X7fa8C7xBpJ8WNUyiajDL?usp=drive_link`
   - URL directa del checkpoint que usa este repositorio:
     - `https://marinedebrisdetector.s3.eu-central-1.amazonaws.com/checkpoints/unet%2B%2B1/epoch=54-val_loss=0.50-auroc=0.987.ckpt`
+- `dataset.h5` de MARIDA para construir las firmas SAM:
+  - repositorio original de MARIDA: `https://github.com/marine-debris/marine-debris.github.io`
+  - DOI principal del dataset MARIDA: `https://doi.org/10.5281/zenodo.5151941`
+  - el propio README de MARIDA indica que `data/dataset.h5` puede generarse ejecutando `utils/spectral_extraction.py` tras descargar MARIDA completo, o descargarse aparte si se dispone de ese artefacto.
 
 ## Qué se conserva de `data/marida/`
 
@@ -95,7 +99,7 @@ La carpeta `data/marida/marine-debris.github.io/` corresponde al repositorio del
 - código de inferencia de `ResNet`,
 - utilidades mínimas realmente importadas por esos scripts,
 - pesos entrenados necesarios,
-- `dataset.h5`, usado para construir las firmas espectrales del clasificador SAM.
+- y la estructura mínima para referenciar `dataset.h5`, usado para construir las firmas espectrales del clasificador SAM.
 
 Se han excluido de esa carpeta:
 

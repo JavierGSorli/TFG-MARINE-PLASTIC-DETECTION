@@ -47,7 +47,6 @@ data/marida/marine-debris.github.io/semantic_segmentation/unet/trained_models/44
 data/marida/marine-debris.github.io/semantic_segmentation/random_forest/*
 !data/marida/marine-debris.github.io/semantic_segmentation/random_forest/engineering_patches.py
 !data/marida/marine-debris.github.io/semantic_segmentation/random_forest/random_forest.py
-!data/marida/marine-debris.github.io/semantic_segmentation/random_forest/rf_classifier.joblib
 !data/marida/marine-debris.github.io/semantic_segmentation/random_forest/rf_classifier_full.joblib
 !data/marida/marine-debris.github.io/semantic_segmentation/random_forest/rf_classifier_no_texture.joblib
 !data/marida/marine-debris.github.io/semantic_segmentation/random_forest/rf_classifier_indices_only.joblib
@@ -73,7 +72,6 @@ data/marida/marine-debris.github.io/utils/*
 !data/marida/marine-debris.github.io/utils/assets.py
 !data/marida/marine-debris.github.io/data/
 data/marida/marine-debris.github.io/data/*
-!data/marida/marine-debris.github.io/data/dataset.h5
 
 # Checkpoint externo realmente usado
 !data/external_models/
