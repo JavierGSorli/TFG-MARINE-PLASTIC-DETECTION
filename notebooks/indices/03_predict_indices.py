@@ -130,7 +130,11 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if in_path.is_dir():
-        tif_files = sorted(in_path.glob("*.tif"))
+        tif_files = sorted(
+            tif_path
+            for tif_path in in_path.glob("*.tif")
+            if not tif_path.name.endswith("_mask.tif")
+        )
     else:
         tif_files = [in_path]
 

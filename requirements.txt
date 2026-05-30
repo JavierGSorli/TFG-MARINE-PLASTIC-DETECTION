@@ -1,0 +1,35 @@
+# Core scientific stack
+numpy
+pandas
+scipy
+
+# Geospatial and raster I/O
+rasterio
+xarray
+netCDF4
+
+# Data access and file formats
+requests
+openpyxl
+tables
+
+# Plotting and image utilities
+matplotlib
+Pillow
+folium
+
+# Machine learning
+scikit-learn
+scikit-image
+joblib
+
+# Deep learning
+torch
+torchvision
+segmentation-models-pytorch
+
+# Remote data access
+openeo
+
+# Markdown table export used by some summaries
+tabulate

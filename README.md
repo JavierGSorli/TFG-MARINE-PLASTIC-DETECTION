@@ -1,326 +1,199 @@
-# TFG — Detección de residuos plásticos marinos en el Estrecho de Gibraltar
-## Documento de contexto para Claude Code
+# TFG Marine Plastic Detection
 
----
+Repositorio del Trabajo Fin de Grado sobre detección de residuos plásticos flotantes en Sentinel-2 en el área del Estrecho de Gibraltar.
 
-## 1. Descripción del proyecto
+El objetivo de este repositorio es permitir la **reconstrucción completa del flujo**:
 
-**Título:** Detección de residuos plásticos mediante procesado de imágenes Sentinel-2 y Machine Learning  
-**Grado:** Ciencia de Datos e Inteligencia Artificial — UPM (ETSII)  
-**Autor:** Javier González Sorlí  
-**Tutora:** Estíbaliz Martínez Izquierdo  
+1. selección de candidatos y descarga de imágenes,
+2. ejecución de baselines,
+3. calibración y evaluación,
+4. construcción del sistema híbrido,
+5. visualización geográfica de resultados.
 
-**Objetivo:** Evaluar y comparar distintos métodos de detección de residuos plásticos flotantes en imágenes Sentinel-2 usando como referencia un catálogo de detecciones reales en el Mediterráneo. La zona de estudio es el **Estrecho de Gibraltar y Mar de Alborán occidental**, definida por un polígono KML.
+## Estructura
 
----
-
-## 2. Entorno técnico
-
-- **SO:** Windows 11
-- **Python:** entorno conda llamado `marida`
-- **Ruta base del proyecto:** `C:\CDIA_oficial\tfg\tfg-marine-plastic-detection\`
-- **Librerías principales:** rasterio, numpy, pandas, torch, torchvision, openeo, xarray, scipy, pyproj, scikit-learn, xgboost, matplotlib, Pillow, tkinter, requests
-
----
-
-## 3. Estructura de carpetas
-
-```
-tfg-marine-plastic-detection/
-│
-├── data/
-│   ├── windrows_nature/
-│   │   ├── general/
-│   │   │   └── 41467_2024_48674_MOESM3_ESM.xlsx   # CSV Nature (14374 LW)
-│   │   └── detallado/11045944/
-│   │       └── WASP_LW_SENT2_MED_L1C_B_201506_202109_10m_6y_NRT_v1.0.nc  # NC Nature
-│   ├── mapa_estrecho.kml                           # Polígono de la zona de estudio
-│   └── marida/marine-debris.github.io/
-│       ├── semantic_segmentation/unet/             # UNet MARIDA
-│       │   ├── unet.py
-│       │   ├── dataloader.py
-│       │   ├── predict_mask.py                     # Script de predicción UNet (llamado via subprocess)
-│       │   └── trained_models/44/model.pth         # Pesos UNet
-│       ├── semantic_segmentation/random_forest/    # RF MARIDA
-│       │   └── rf_classifier.joblib
-│       └── multi-label/resnet/                     # ResNet MARIDA
-│           ├── resnet.py
-│           ├── predict_resnet.py                   # Script de predicción ResNet (llamado via subprocess)
-│           └── trained_models/18/model.pth
-│
-├── results/auto/                                   # Todas las salidas del pipeline
-│   ├── gibraltar_candidatos.csv                    # 876 candidatos filtrados
-│   ├── positive_download_failures.csv              # Positivos que fallaron la descarga
-│   ├── test_patches_final/                         # Patches descargados (SI + NO)
-│   │   ├── YYYYMMDD_SI_NPXPATCH_IDX.tif            # Patch positivo
-│   │   ├── YYYYMMDD_SI_NPXPATCH_IDX_mask.tif       # Máscara GT (del NC)
-│   │   └── YYYYMMDD_NO_000000_IDX_LABEL.tif        # Patch negativo validado
-│   ├── test_masks_unet/                            # Máscaras predichas por UNet
-│   ├── test_masks_rf/                              # Máscaras predichas por RF
-│   ├── test_resnet_json/                           # JSONs con probs ResNet
-│   ├── test_indices/                               # Rasters FDI, NDVI, FDI+NDVI y máscaras
-│   ├── predictions_master.csv                      # CSV maestro (salida 06)
-│   ├── xgboost_dataset.csv                         # Dataset tabular (salida 07)
-│   ├── xgboost_model/                              # Modelo, métricas y cv_results.csv XGBoost
-│   ├── evaluation/                                 # Tabla comparativa y figuras
-│   └── error_analysis/                             # Paneles de errores FP/FN
-│
-├── deliverables/tfg_pipeline_unificado/            # Pipeline canónico de entrega
-│   ├── scripts/                                    # ← AQUÍ están todos los scripts activos
-│   │   ├── config.py
-│   │   ├── geo_utils.py
-│   │   ├── pipeline_utils.py
-│   │   ├── 00_explore_candidates.py
-│   │   ├── 01_download_dataset.py
-│   │   ├── 02_predict_unet.py
-│   │   ├── 03_predict_rf.py
-│   │   ├── 04_predict_resnet.py
-│   │   ├── 05_predict_indices.py
-│   │   ├── 06_unify_predictions.py
-│   │   ├── 07_build_xgboost_dataset.py
-│   │   ├── 08_train_xgboost.py
-│   │   ├── 09_evaluate.py
-│   │   ├── 10_error_analysis.py
-│   │   └── 11_visualizacion.py
-│   └── docs/REVIEW.md                             # Problemas detectados en versión anterior
-│
-└── notebooks/                                      # Scripts antiguos (NO usar — referencia histórica)
+```text
+data/        datos fuente, modelos preentrenados y checkpoints necesarios
+notebooks/   solo scripts auxiliares usados por el pipeline
+pipeline/    pipeline final reproducible
 ```
 
----
+## Requisitos
 
-## 4. Datasets
+- Python 3.10 o 3.11
+- Entorno con GDAL/Rasterio correctamente instalado
+- Acceso a Copernicus Data Space / openEO para descargar Sentinel-2
 
-### 4.1 CSV Nature (Cózar et al. 2024, Nature Communications)
-- **Archivo:** `41467_2024_48674_MOESM3_ESM.xlsx`
-- **Contenido:** 14.374 detecciones de Litter Windows (LW) en el Mediterráneo (2015–2021), revisadas por humanos
-- **Columnas:** `Latitude`, `Longitude`, `Dec_time`, `Str_time`, `Year`, `Month`, `Day`, `Date`, `CodeT`, `Pixels per LW`, `Distance to land (m)`
-- `CodeT` = hora de la imagen Sentinel-2 (ej: `T105629`)
-- **Gibraltar filtrado:** 876 candidatos (`Pixels per LW >= 5` AND `Distance to land > 1280m` AND dentro del KML)
-- **Guardado en:** `results/auto/gibraltar_candidatos.csv`
+Instalación básica:
 
-### 4.2 NC Nature (WASP catalogue — BEC, ICM-CSIC)
-- **Archivo:** `WASP_LW_SENT2_MED_L1C_B_201506_202109_10m_6y_NRT_v1.0.nc`
-- **Variables clave:**
-  - `lat_centroid`, `lon_centroid` — coordenadas del centroide de cada LW
-  - `x_centroid`, `y_centroid` — posición en píxeles de la imagen L1C original
-  - `n_pixels_fil` — número de píxeles del filamento
-  - `pixel_x`, `pixel_y` — coordenadas de píxel de cada pixel del filamento (shape: 14374 × 2563)
-  - `pixel_spec` — espectros de reflectancia de cada píxel (13 bandas L1C)
-  - `s2_product` — nombre del producto Sentinel-2 usado
-- **Uso:** genera las **máscaras de ground truth pixel a pixel** para los patches positivos
-- La conexión con `gibraltar_candidatos.csv` es por `lat_centroid`/`lon_centroid` (coinciden exactamente)
-- El CSV tiene una columna `nc_idx` que guarda el índice en el NC para cada candidato
-
-### 4.3 Marine Pollution Bulletin 2025 (Ramos-Alcántara et al.)
-- Suplementario S3: concentración in situ de plástico (items/m²) medida con redes de arrastre en Mediterráneo occidental
-- **Uso planificado:** validación física — correlación Spearman entre predicciones y concentración real
-
----
-
-## 5. Modelos implementados
-
-### 5.1 UNet (MARIDA)
-- **Tipo:** Segmentación semántica pixel a pixel
-- **Input:** patch (11, 256, 256) float32 normalizado con `bands_mean`/`bands_std`
-- **Output:** máscara de clases 1–11 (clase 1 = Marine Debris)
-- **Pesos:** `unet/trained_models/44/model.pth`
-- **Script de predicción:** `predict_mask.py` en `data/marida/…/unet/` (llamado via subprocess desde `02_predict_unet.py`)
-- **Notas:** requiere pad a múltiplo de 32 antes de inferencia; NO usar `--auto_scale` con patches de OpenEO (ya en 0–1)
-
-### 5.2 Random Forest (MARIDA)
-- **Tipo:** Clasificación pixel a pixel con features espectrales + índices + GLCM
-- **Script batch:** `03_predict_rf.py`
-- **Modelo:** `rf_classifier.joblib`
-- **Features:** 11 bandas + NDVI, FAI, FDI, SI, NDWI, NRD, NDMI, BSI + 6 features GLCM
-
-### 5.3 ResNet (MARIDA)
-- **Tipo:** Clasificación multi-label por patch completo
-- **Output:** probabilidad de presencia de cada clase (no máscara, sino label por patch)
-- **Script batch:** `04_predict_resnet.py` → llama via subprocess a `predict_resnet.py` en `data/marida/…/resnet/`
-- **JSON de salida:** `{"probabilities": {"Marine Debris": float, ...}, "active_labels": [...], "threshold": float}`
-- **Clase de interés:** `Marine Debris` (probabilidad continua 0–1)
-
-### 5.4 Índices espectrales (baseline)
-- **FDI (Floating Debris Index)** — Biermann et al. 2020:
-  ```
-  FDI = B08 - (B06 + (B11-B06) * ((842-665)/(1610-665)) * 10)
-  ```
-  Índices MARIDA: B08=idx7, B06=idx5, B11=idx9
-- **NDVI:**
-  ```
-  NDVI = (B08 - B04) / (B08 + B04)
-  ```
-- **FDI+NDVI:** máscara combinada (AND lógico de ambas)
-- **Umbral adaptativo:** media + 3*std del patch
-- **Script:** `05_predict_indices.py` → genera rasters FDI, NDVI, FDI+NDVI y sus máscaras binarias
-
-### 5.5 XGBoost (nuevo)
-- **Tipo:** Clasificación binaria por patch (SI/NO plástico)
-- **Features:** estadísticas espectrales por banda (media, std, p95) + stats de índices + scores de los otros modelos
-- **CV:** Leave-One-Out (dataset pequeño) o StratifiedKFold(5)
-- **Scripts:** `07_build_xgboost_dataset.py` → `08_train_xgboost.py`
-
----
-
-## 6. Pipeline de descarga de patches
-
-### Fuente de datos
-- **Sentinel-2 L2A** via OpenEO (dataspace.copernicus.eu)
-- Mismo usuario que Copernicus Browser
-- Bandas en orden MARIDA exacto: `["B01","B02","B03","B04","B05","B06","B07","B08","B8A","B11","B12"]`
-
-### Formato de los patches
-- **Shape:** (11, 256, 256)
-- **Dtype:** float32
-- **Rango:** 0–1 (DN/10000, solo si DN > 10)
-- **CRS:** EPSG:32630 (UTM 30N)
-- **Resolución:** 10m/píxel
-- **Descarga:** bbox de 3.84×3.84 km → recorte central a 256×256
-
-### Naming convention
-```
-YYYYMMDD_SI_NPXPATCH_IDX.tif       # positivos (hay plástico)
-YYYYMMDD_SI_NPXPATCH_IDX_mask.tif  # máscara GT (píxeles plástico del NC)
-YYYYMMDD_NO_000000_IDX_LABEL.tif   # negativos validados visualmente
-                                    # LABEL = CLARO | DUDOSO | DIFICIL
-```
-`NPXPATCH` = número de píxeles del filamento que caen dentro del patch
-
-### Generación de máscaras GT (ground truth pixel a pixel)
-La función `build_mask` en `01_download_dataset.py`:
-1. Proyecta el centroide del filamento (lat/lon del NC → UTM del patch) para obtener el píxel central
-2. Calcula el desplazamiento relativo de cada píxel del filamento respecto al centroide en coordenadas de escena L1C
-3. Aplica ese desplazamiento al píxel central del patch
-4. Refina con `find_shift()`: correlación cruzada vía FFT entre la máscara proyectada y el FDI del patch
-5. El nombre del archivo incluye el número de píxeles que realmente caen en el patch
-
-**Nota importante:** el NC usa L1C y coordenadas de píxel en el sistema de la imagen original. El patch descargado es L2A en UTM. El desplazamiento entre ambos sistemas se compensa con `find_shift()` usando el FDI como referencia espectral.
-
-### Validación de negativos
-Los patches negativos se muestran en una ventana tkinter con 4 botones:
-- **NO** → descartar, buscar otra coordenada
-- **DUDOSO** → aceptar con etiqueta `DUDOSO`
-- **CLARO** → aceptar con etiqueta `CLARO`
-- **DIFÍCIL** → aceptar con etiqueta `DIFICIL`
-
----
-
-## 7. Parámetros MARIDA (normalización)
-
-```python
-bands_mean = [0.05197577, 0.04783991, 0.04056812, 0.03163572,
-              0.02972606, 0.03457443, 0.03875053, 0.03436435,
-              0.0392113,  0.02358126, 0.01588816]
-
-bands_std  = [0.04725893, 0.04743808, 0.04699043, 0.04967381,
-              0.04946782, 0.06458357, 0.07594915, 0.07120246,
-              0.08251058, 0.05111466, 0.03524419]
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-### Clases MARIDA
+## Recursos incluidos necesarios
+
+El pipeline depende de estos recursos versionados en el repo:
+
+- `data/area_estudio/mapa_estrecho.kml`
+- `data/windrows_nature/general/41467_2024_48674_MOESM3_ESM.xlsx`
+- `data/marida/marine-debris.github.io/`
+  - `semantic_segmentation/unet/`
+  - `semantic_segmentation/random_forest/`
+  - `multi-label/resnet/`
+  - `utils/`
+  - `data/dataset.h5`
+- scripts auxiliares todavía usados por el pipeline:
+  - `notebooks/randomforest/predict_mask_rf.py`
+  - `notebooks/indices/03_predict_indices.py`
+  - `notebooks/indices/03_predict_indices2.py`
+
+## Qué se conserva de `data/`
+
+La carpeta `data/` no contiene salidas generadas por el pipeline, sino únicamente los recursos mínimos necesarios para poder reconstruirlo:
+
+- `area_estudio/`: geometría del área de trabajo.
+- `windrows_nature/`: datos fuente del estudio de Nature usados para construir el dataset.
+- `marida/`: código y pesos mínimos tomados del estudio MARIDA para ejecutar los modelos preentrenados utilizados en este trabajo.
+- `external_models/`: checkpoint del modelo externo `MarineDebrisDetector`.
+
+No se versionan en `data/`:
+
+- los patches Sentinel-2 descargados,
+- las máscaras generadas,
+- las predicciones raster,
+- ni otros artefactos pesados producidos durante la ejecución.
+
+Dos recursos necesarios para reproducir el flujo completo no se incluyen en GitHub por superar el límite de tamaño de archivos:
+
+- `data/windrows_nature/detallado/11045944/WASP_LW_SENT2_MED_L1C_B_201506_202109_10m_6y_NRT_v1.0.nc`
+- `data/external_models/marinedebrisdetector/unetplusplus1.ckpt`
+
+El pipeline espera encontrarlos en esas rutas exactas. Deben descargarse manualmente antes de ejecutar:
+
+- catálogo detallado WASP / Nature:
+  - registro Zenodo: `https://zenodo.org/records/11045944`
+  - fichero esperado por el pipeline: `WASP_LW_SENT2_MED_L1C_B_201506_202109_10m_6y_NRT_v1.0.nc`
+  - descarga directa habitual de Zenodo:
+    - `https://zenodo.org/records/11045944/files/WASP_LW_SENT2_MED_L1C_B_201506_202109_10m_6y_NRT_v1.0.nc?download=1`
+- checkpoint externo `MarineDebrisDetector`:
+  - repositorio original: `https://github.com/MarcCoru/marinedebrisdetector`
+  - página de modelos con los enlaces oficiales: `https://github.com/MarcCoru/marinedebrisdetector/blob/main/doc/models.md`
+  - carpeta pública de pesos indicada en el README del repositorio original:
+    - `https://drive.google.com/drive/folders/1OBKr9G4zCP3X7fa8C7xBpJ8WNUyiajDL?usp=drive_link`
+  - URL directa del checkpoint que usa este repositorio:
+    - `https://marinedebrisdetector.s3.eu-central-1.amazonaws.com/checkpoints/unet%2B%2B1/epoch=54-val_loss=0.50-auroc=0.987.ckpt`
+
+## Qué se conserva de `data/marida/`
+
+La carpeta `data/marida/marine-debris.github.io/` corresponde al repositorio del estudio **MARIDA**. En este repositorio público no se incluye completa, sino solo la parte imprescindible para ejecutar el flujo actual:
+
+- código de inferencia de `UNet`,
+- código y modelos `Random Forest`,
+- código de inferencia de `ResNet`,
+- utilidades mínimas realmente importadas por esos scripts,
+- pesos entrenados necesarios,
+- `dataset.h5`, usado para construir las firmas espectrales del clasificador SAM.
+
+Se han excluido de esa carpeta:
+
+- ejemplos,
+- scripts de entrenamiento no usados por el pipeline,
+- evaluaciones originales ajenas al flujo actual,
+- datos de prueba,
+- zips,
+- cachés
+- y material crudo que no aporta nada a la reproducibilidad del pipeline final.
+
+## Papel de `notebooks/`
+
+La carpeta `notebooks/` no se publica como material exploratorio general. Solo se conservan tres scripts auxiliares que el pipeline sigue invocando directamente:
+
+- `notebooks/randomforest/predict_mask_rf.py`
+- `notebooks/indices/03_predict_indices.py`
+- `notebooks/indices/03_predict_indices2.py`
+
+El resto del contenido histórico de `notebooks/` queda fuera del repositorio público.
+
+## Datos generados
+
+No se versionan:
+
+- `data/sentinel2/` descargado o generado por el pipeline
+- máscaras y predicciones `.tif`
+- salidas pesadas dentro de `pipeline/outputs/`
+- material auxiliar generado en `pipeline/reports/`
+
+## Configuración de rutas
+
+El pipeline ya no depende de rutas absolutas locales.
+
+Por defecto resuelve la raíz del proyecto automáticamente. Si se quiere forzar otra ubicación, puede definirse:
+
+```powershell
+$env:TFG_PROJECT_ROOT="C:\ruta\al\repositorio"
 ```
-1  = Marine Debris         7  = Marine Water
-2  = Dense Sargassum       8  = Sediment-Laden Water
-3  = Sparse Sargassum      9  = Foam
-4  = Natural Organic Mat.  10 = Turbid Water
-5  = Ship                  11 = Shallow Water
-6  = Clouds
+
+## Descarga de datos Sentinel-2
+
+La descarga de patches usa `openEO` sobre Copernicus Data Space. Antes de ejecutar la fase de dataset, debes autenticarte con el backend correspondiente.
+
+El script implicado es:
+
+- `pipeline/scripts/01_dataset/02_download_dataset_patches.py`
+
+Si tu entorno requiere autenticación interactiva, hazla antes de lanzar el pipeline.
+
+## Orden general de ejecución
+
+Desde la raíz del repositorio:
+
+```powershell
+# 1. Construcción del dataset
+python .\pipeline\scripts\01_dataset\01_select_nature_candidates.py
+python .\pipeline\scripts\01_dataset\02_download_dataset_patches.py
+python .\pipeline\scripts\01_dataset\03_annotate_patch_quality.py
+python .\pipeline\scripts\01_dataset\04_build_grouped_metadata.py
+python .\pipeline\scripts\01_dataset\05_build_grouped_splits.py
+
+# 2. Baselines
+python .\pipeline\scripts\02_baselines\01_run_unet_marida.py
+python .\pipeline\scripts\02_baselines\02_run_rf_marida.py --all-modes
+python .\pipeline\scripts\02_baselines\03_run_resnet_marida.py
+python .\pipeline\scripts\02_baselines\04_run_spectral_indices.py
+python .\pipeline\scripts\02_baselines\05_build_sam_signatures.py
+python .\pipeline\scripts\02_baselines\06_run_sam_pixel_classifier.py
+python .\pipeline\scripts\02_baselines\07_run_external_models.py --b09-mode zero
+python .\pipeline\scripts\02_baselines\07_run_external_models.py --b09-mode copy_b8a
+python .\pipeline\scripts\02_baselines\07_run_external_models.py --b09-mode interpolate_b8a_b11
+
+# 3. Evaluación
+python .\pipeline\scripts\03_evaluation\01_calibrate_thresholds.py
+python .\pipeline\scripts\03_evaluation\02_generate_calibrated_outputs.py
+python .\pipeline\scripts\03_evaluation\03_unify_predictions.py
+python .\pipeline\scripts\03_evaluation\04_evaluate_patch_level.py
+python .\pipeline\scripts\03_evaluation\05_evaluate_segmentation_pixelwise.py
+python .\pipeline\scripts\03_evaluation\06_evaluate_segmentation_tolerant.py
+python .\pipeline\scripts\03_evaluation\07_error_analysis_and_diagnostics.py
+
+# 4. Híbrido y mapas
+python .\pipeline\scripts\04_hybrid_and_maps\01_build_hybrid_detector_segmenter.py
+python .\pipeline\scripts\04_hybrid_and_maps\02_generate_gibraltar_maps.py
+python .\pipeline\scripts\04_hybrid_and_maps\03_visualize_all_mask_models.py
 ```
 
----
+## Resultados principales
 
-## 8. Scripts del pipeline — descripción y estado
+- evaluación: `pipeline/outputs/03_evaluation/`
+- híbrido y mapas: `pipeline/outputs/04_hybrid_and_maps/`
+- resúmenes para memoria:
+  - `pipeline/outputs/tablas.md`
+  - `pipeline/outputs/tablas2.md`
 
-Todos los scripts activos están en `deliverables/tfg_pipeline_unificado/scripts/`.
+## Documentación específica del pipeline
 
-| Script | Función | Estado |
-|--------|---------|--------|
-| `config.py` | Rutas y parámetros centralizados (auto-detecta raíz via `.git`) | ✅ |
-| `geo_utils.py` | Parseo KML, point-in-polygon, filtrado geográfico | ✅ |
-| `pipeline_utils.py` | `iter_patch_files`, `run_command`, helpers comunes | ✅ |
-| `00_explore_candidates.py` | Filtra CSV Nature por KML del Estrecho, genera `gibraltar_candidatos.csv` | ✅ |
-| `01_download_dataset.py` | Descarga patches Sentinel-2 via OpenEO, genera máscaras GT, valida negativos | ✅ |
-| `02_predict_unet.py` | Aplica UNet MARIDA en batch a todos los patches | ✅ |
-| `03_predict_rf.py` | Aplica Random Forest MARIDA en batch | ✅ |
-| `04_predict_resnet.py` | Aplica ResNet MARIDA en batch, guarda JSON con probs | ✅ |
-| `05_predict_indices.py` | Calcula FDI, NDVI y FDI+NDVI con umbral adaptativo | ✅ |
-| `06_unify_predictions.py` | Unifica todas las predicciones en `predictions_master.csv` | ✅ |
-| `07_build_xgboost_dataset.py` | Construye dataset tabular para XGBoost | ✅ |
-| `08_train_xgboost.py` | Entrena XGBoost con LOO-CV, guarda modelo y métricas | ✅ |
-| `09_evaluate.py` | Tabla comparativa + curvas ROC + gráficos | ✅ |
-| `10_error_analysis.py` | Análisis visual de FP y FN por método | ✅ |
-| `11_visualizacion.py` | Visor interactivo matplotlib: RGB + todas las máscaras por patch | ✅ |
+La descripción detallada por fases está en:
 
----
-
-## 9. Orden de ejecución del pipeline completo
-
-Ejecutar desde `deliverables/tfg_pipeline_unificado/scripts/`:
-
-```bash
-python 00_explore_candidates.py
-python 01_download_dataset.py --n_positives 50
-
-# Predicciones (pueden ejecutarse en paralelo)
-python 02_predict_unet.py
-python 03_predict_rf.py
-python 04_predict_resnet.py
-python 05_predict_indices.py
-
-# Unificar y evaluar
-python 06_unify_predictions.py
-python 07_build_xgboost_dataset.py
-python 08_train_xgboost.py
-python 09_evaluate.py
-python 10_error_analysis.py
-
-# Visualización interactiva
-python 11_visualizacion.py --limit 50 --only-label ALL
-```
-
----
-
-## 10. Problemas conocidos y limitaciones
-
-### Diferencia radiométrica L2A vs ACOLITE
-MARIDA fue entrenado con reflectancias Rayleigh-corregidas via ACOLITE (`rhos`). Los patches de OpenEO son L2A de ESA. Los valores son similares pero no idénticos, lo que causa que la UNet clasifique agua mediterránea limpia como `Shallow Water` en algunos casos. Esta es una limitación documentada que se menciona en la memoria.
-
-### Coordenadas L1C vs L2A en las máscaras GT
-El NC de Nature usa coordenadas de píxel en la imagen L1C original. Los patches descargados son L2A en UTM. La función `build_mask` compensa este desajuste con `find_shift()` (correlación cruzada FDI), pero el shift puede variar por patch (observado: 15–77 píxeles vertical, 0–30 horizontal).
-
-### Rate limiting OpenEO
-OpenEO limita a ~3 descargas simultáneas. Entre descargas se aplica una pausa. Errores 429 se reintentan automáticamente.
-
-### Error cosmético GDAL
-```
-ERROR 4: Unable to open EPSG support file gcs.csv.
-```
-No afecta a los resultados. Solución opcional: añadir variable de entorno `GDAL_DATA`.
-
-### Dataset pequeño
-Con pocos patches positivos descargados, las métricas de evaluación no son estadísticamente robustas. El pipeline está diseñado para escalar a los 876 candidatos disponibles.
-
----
-
-## 11. Próximos pasos pendientes
-
-1. **Escalar la descarga** a 50–100 patches positivos + negativos del CSV de Gibraltar (los 876 candidatos están disponibles en `gibraltar_candidatos.csv`)
-2. **Aplicar todos los modelos** al dataset completo
-3. **Ejecutar pipeline de evaluación** (scripts 06–10)
-4. **Mapa Leaflet interactivo** del Estrecho con predicciones del mejor modelo superpuestas a los puntos del CSV de Nature (`11_visualizacion.py` cubre la visualización local)
-5. **Correlación Spearman** con concentraciones in situ del Marine Pollution Bulletin 2025
-6. **Redactar la memoria** con los resultados comparativos
-
----
-
-## 12. Notas para Claude Code
-
-- **Los scripts activos están en `deliverables/tfg_pipeline_unificado/scripts/`** — la carpeta `notebooks/` contiene versiones antiguas y NO debe usarse como referencia
-- `config.py` centraliza todas las rutas y se auto-detecta usando `.git` como ancla; si se cambia algo, solo hay que tocar ese archivo
-- `geo_utils.py` y `pipeline_utils.py` son módulos de utilidades compartidas por todos los scripts
-- Los scripts 02–05 (predicciones) se pueden ejecutar en paralelo entre sí
-- El entorno conda `marida` tiene todas las dependencias instaladas
-- Los patches están georeferenciados (GeoTIFF con CRS y transform) — se pueden abrir en QGIS directamente
-- La visualización RGB correcta usa B04/B03/B02 (índices 3,2,1) con estiramiento `min=0, max=0.1`
-- `11_visualizacion.py` muestra RGB + GT + UNet + RF + FDI + NDVI + FDI+NDVI + XGBoost en una sola ventana; teclas: flechas izquierda/derecha, `a`/`d`, `q` para salir
+- `pipeline/README.md`

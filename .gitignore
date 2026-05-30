@@ -1,12 +1,149 @@
-﻿data/
+# ---------------------------------------------------------------------------
+# Datos y artefactos generados
+# ---------------------------------------------------------------------------
+
+# Ignora todo data/ por defecto y reabre solo los recursos necesarios para
+# reconstruir el pipeline completo desde cero.
+data/*
+
+# Datos fuente del area de estudio
+!data/area_estudio/
+data/area_estudio/*
+!data/area_estudio/mapa_estrecho.kml
+
+# Datos fuente de Nature / litter windrows
+!data/windrows_nature/
+data/windrows_nature/*
+!data/windrows_nature/general/
+data/windrows_nature/general/*
+!data/windrows_nature/general/41467_2024_48674_MOESM3_ESM.xlsx
+!data/windrows_nature/detallado/
+data/windrows_nature/detallado/*
+!data/windrows_nature/detallado/11045944/
+data/windrows_nature/detallado/11045944/*
+
+# Recursos MARIDA realmente usados por el pipeline
+!data/marida/
+data/marida/*
+!data/marida/marine-debris.github.io/
+data/marida/marine-debris.github.io/*
+
+# UNet MARIDA: solo inferencia y pesos usados
+!data/marida/marine-debris.github.io/semantic_segmentation/
+data/marida/marine-debris.github.io/semantic_segmentation/*
+!data/marida/marine-debris.github.io/semantic_segmentation/unet/
+data/marida/marine-debris.github.io/semantic_segmentation/unet/*
+!data/marida/marine-debris.github.io/semantic_segmentation/unet/dataloader.py
+!data/marida/marine-debris.github.io/semantic_segmentation/unet/predict_mask.py
+!data/marida/marine-debris.github.io/semantic_segmentation/unet/unet.py
+!data/marida/marine-debris.github.io/semantic_segmentation/unet/trained_models/
+data/marida/marine-debris.github.io/semantic_segmentation/unet/trained_models/*
+!data/marida/marine-debris.github.io/semantic_segmentation/unet/trained_models/44/
+data/marida/marine-debris.github.io/semantic_segmentation/unet/trained_models/44/*
+!data/marida/marine-debris.github.io/semantic_segmentation/unet/trained_models/44/model.pth
+
+# Random Forest MARIDA: solo módulos y modelos usados
+!data/marida/marine-debris.github.io/semantic_segmentation/random_forest/
+data/marida/marine-debris.github.io/semantic_segmentation/random_forest/*
+!data/marida/marine-debris.github.io/semantic_segmentation/random_forest/engineering_patches.py
+!data/marida/marine-debris.github.io/semantic_segmentation/random_forest/random_forest.py
+!data/marida/marine-debris.github.io/semantic_segmentation/random_forest/rf_classifier.joblib
+!data/marida/marine-debris.github.io/semantic_segmentation/random_forest/rf_classifier_full.joblib
+!data/marida/marine-debris.github.io/semantic_segmentation/random_forest/rf_classifier_no_texture.joblib
+!data/marida/marine-debris.github.io/semantic_segmentation/random_forest/rf_classifier_indices_only.joblib
+!data/marida/marine-debris.github.io/semantic_segmentation/random_forest/rf_classifier_bands_only.joblib
+
+# ResNet MARIDA: solo inferencia y pesos usados
+!data/marida/marine-debris.github.io/multi-label/
+data/marida/marine-debris.github.io/multi-label/*
+!data/marida/marine-debris.github.io/multi-label/resnet/
+data/marida/marine-debris.github.io/multi-label/resnet/*
+!data/marida/marine-debris.github.io/multi-label/resnet/dataloader.py
+!data/marida/marine-debris.github.io/multi-label/resnet/predict_resnet.py
+!data/marida/marine-debris.github.io/multi-label/resnet/resnet.py
+!data/marida/marine-debris.github.io/multi-label/resnet/trained_models/
+data/marida/marine-debris.github.io/multi-label/resnet/trained_models/*
+!data/marida/marine-debris.github.io/multi-label/resnet/trained_models/18/
+data/marida/marine-debris.github.io/multi-label/resnet/trained_models/18/*
+!data/marida/marine-debris.github.io/multi-label/resnet/trained_models/18/model.pth
+
+# Utilidades MARIDA realmente importadas
+!data/marida/marine-debris.github.io/utils/
+data/marida/marine-debris.github.io/utils/*
+!data/marida/marine-debris.github.io/utils/assets.py
+!data/marida/marine-debris.github.io/data/
+data/marida/marine-debris.github.io/data/*
+!data/marida/marine-debris.github.io/data/dataset.h5
+
+# Checkpoint externo realmente usado
+!data/external_models/
+data/external_models/*
+!data/external_models/marinedebrisdetector/
+data/external_models/marinedebrisdetector/*
+
+# Datos generados / descargados por el pipeline
+data/sentinel2/
+
+
+# ---------------------------------------------------------------------------
+# Notebooks: solo se conservan los scripts auxiliares importados por el flujo
+# ---------------------------------------------------------------------------
+
+notebooks/*
+!notebooks/randomforest/
+notebooks/randomforest/*
+!notebooks/randomforest/predict_mask_rf.py
+!notebooks/indices/
+notebooks/indices/*
+!notebooks/indices/03_predict_indices.py
+!notebooks/indices/03_predict_indices2.py
+
+
+# ---------------------------------------------------------------------------
+# Documentación de trabajo no publicada
+# ---------------------------------------------------------------------------
+
+docs/
+
+
+# ---------------------------------------------------------------------------
+# Outputs y reports generados
+# ---------------------------------------------------------------------------
+
+pipeline/outputs/**
+pipeline/reports/**
+
+
+# ---------------------------------------------------------------------------
+# Archivos pesados / locales
+# ---------------------------------------------------------------------------
+
 results/
 acolite/
-*.zip
-__pycache__/
-*.pyc
-.vscode/
---in_dir
 
+*.zip
 *.tif
 *.tiff
 *.aux.xml
+*.tmp
+*.bak
+
+
+# ---------------------------------------------------------------------------
+# Cachés y entorno local
+# ---------------------------------------------------------------------------
+
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.vscode/
+
+--in_dir
+tmp/
+tmp_*.py
+~$*.docx
+
+pipeline/.claude/
